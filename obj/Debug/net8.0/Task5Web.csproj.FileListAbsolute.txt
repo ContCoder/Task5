@@ -35,3 +35,4 @@ D:\ILearning\Task5\Task5API\Task5Web\obj\Debug\net8.0\ref\Task5Web.dll
 D:\ILearning\Task5\Task5API\Task5Web\bin\Debug\net8.0\Bogus.dll
 D:\ILearning\Task5\Task5API\Task5Web\obj\Debug\net8.0\Task5Web.csproj.AssemblyReference.cache
 D:\ILearning\Task5\Task5API\Task5Web\obj\Debug\net8.0\Task5Web.csproj.Up2Date
+D:\ILearning\Task5\Task5API\Task5Web\obj\Debug\net8.0\Task5Web.sourcelink.json

@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Task5Web")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2f4f5836504f4bfac79857a32f579f3944ae52c3")]
 [assembly: System.Reflection.AssemblyProductAttribute("Task5Web")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Task5Web")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
