@@ -1,0 +1,393 @@
+﻿@model Task5Web.Models.BooksViewModel
+
+@{
+    ViewData["Title"] = "Books Catalog";
+}
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col-md-3">
+            <label class="form-label text-muted small">Language</label>
+            <select class="form-select" id="languageSelect">
+                @if (Model.Language == "en")
+                {
+                    <option value="en" selected>English (US)</option>
+                }
+                else
+                {
+                    <option value="en">English (US)</option>
+                }
+
+                @if (Model.Language == "es")
+                {
+                    <option value="es" selected>Español (ES)</option>
+                }
+                else
+                {
+                    <option value="es">Español (ES)</option>
+                }
+
+                @if (Model.Language == "fr")
+                {
+                    <option value="fr" selected>Français (FR)</option>
+                }
+                else
+                {
+                    <option value="fr">Français (FR)</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label text-muted small">Seed</label>
+            <div class="input-group">
+                <input type="text" class="form-control" id="seedInput" placeholder="Seed" value="@Model.Seed">
+                <button class="btn btn-outline-secondary" type="button" id="generateSeed" title="Generate Random Seed">🔀</button>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label text-muted small">Likes</label>
+            <div class="position-relative">
+                <input type="range" class="form-range" id="likesRange" min="0" max="10" step="0.1" value="@Model.Likes">
+                <div class="d-flex justify-content-between small text-muted">
+                    <span>0.0</span>
+                    <span id="likesValue" class="fw-bold text-primary">@Model.Likes.ToString("F1")</span>
+                    <span>10.0</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label text-muted small">Review</label>
+            <div class="position-relative">
+                <input type="range" class="form-range" id="reviewRange" min="0" max="5" step="0.1" value="@Model.Review">
+                <div class="d-flex justify-content-between small text-muted">
+                    <span>0.0</span>
+                    <span id="reviewValue" class="fw-bold text-primary">@Model.Review.ToString("F1")</span>
+                    <span>5.0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th style="width: 50px">#</th>
+                    <th style="width: 180px">ISBN</th>
+                    <th>Title</th>
+                    <th>Author(s)</th>
+                    <th>Publisher</th>
+                </tr>
+            </thead>
+            <tbody id="books-table-body">
+                @foreach (var book in Model.Books)
+                {
+                    <tr class="book-row" data-book-id="@book.Index">
+                        <td>@book.Index</td>
+                        <td class="text-break">@book.ISBN</td>
+                        <td>@book.Title</td>
+                        <td>@string.Join(", ", book.Authors)</td>
+                        <td>@book.Publisher</td>
+                    </tr>
+                    <tr class="book-details" id="details-@book.Index" style="display: none;">
+                        <td colspan="5">
+                            <div class="card border-0">
+                                <div class="card-body p-3" style="background-color: #f8f9fa;">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <h5>@book.Title <span class="text-muted">Paperback</span></h5>
+                                            <h6 class="text-muted">by @string.Join(", ", book.Authors)</h6>
+                                            <div class="mb-3">
+                                                <span class="badge bg-primary">★ @book.Likes</span>
+                                            </div>
+                                            <h6>Reviews</h6>
+                                            @if (book.Reviews.Any())
+                                            {
+                                                @foreach (var review in book.Reviews)
+                                                {
+                                                    <p class="mb-1">@review.ReviewText</p>
+                                                    <p class="text-muted small mb-3">— @review.ReviewerName, </p>
+                                                }
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div id="loading" class="text-center py-4" style="display: none;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2">Loading more books...</p>
+    </div>
+
+    <div id="load-more-section" class="text-center py-4">
+        <button id="load-more-btn" class="btn btn-primary" onclick="loadMoreBooks()">Load More Books</button>
+        <p class="small text-muted mt-2">Or scroll to bottom for auto-load</p>
+    </div>
+
+    <div id="no-more-books" class="text-center py-4 text-muted" style="display: none;">
+        <p>No more books to load</p>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let currentPage = @Model.CurrentPage;
+        let hasMore = @Html.Raw(Model.HasMore.ToString().ToLower());
+        let isLoading = false;
+
+        $(document).ready(function() {
+            // Handle seed generation with auto-apply
+            $('#generateSeed').click(function() {
+                const newSeed = Math.floor(Math.random() * 90000000) + 10000000;
+                $('#seedInput').val(newSeed);
+                applyCurrentSettings();
+            });
+
+            // Auto-apply when seed input loses focus or Enter is pressed
+            $('#seedInput').on('blur keypress', function(e) {
+                if (e.type === 'blur' || e.which === 13) { // blur or Enter key
+                    const currentValue = $(this).val();
+                    const originalValue = '@Model.Seed';
+                    if (currentValue !== originalValue && currentValue && !isNaN(currentValue)) {
+                        applyCurrentSettings();
+                    }
+                }
+            });
+
+            // Handle language change with auto-apply
+            $('#languageSelect').change(function() {
+                applyCurrentSettings();
+            });
+
+            // Handle likes range slider with real-time updates
+            $('#likesRange').on('input', function() {
+                const value = parseFloat($(this).val()).toFixed(1);
+                $('#likesValue').text(value);
+            });
+
+            // Handle review range slider with real-time updates
+            $('#reviewRange').on('input', function() {
+                const value = parseFloat($(this).val()).toFixed(1);
+                $('#reviewValue').text(value);
+            });
+
+            // Auto-apply when sliders finish changing (on mouseup/touchend)
+            $('#likesRange, #reviewRange').on('change', function() {
+                applyCurrentSettings();
+            });
+
+            // Handle row clicks to show/hide details
+            $(document).on('click', '.book-row', function() {
+                const bookId = $(this).data('book-id');
+                const detailsRow = $('#details-' + bookId);
+
+                // Hide all other details first
+                $('.book-details').not(detailsRow).slideUp();
+
+                // Toggle current details
+                detailsRow.slideToggle();
+            });
+
+            // Infinite scroll
+            $(window).scroll(function() {
+                const scrollTop = $(window).scrollTop();
+                const windowHeight = $(window).height();
+                const docHeight = $(document).height();
+                const scrollPosition = scrollTop + windowHeight;
+                const threshold = docHeight - 200; // Trigger 200px before end
+
+                console.log('Scroll Debug:', {
+                    scrollPosition,
+                    threshold,
+                    hasMore,
+                    isLoading,
+                    currentPage
+                });
+
+                if (scrollPosition >= threshold && hasMore && !isLoading) {
+                    console.log('Loading more books...');
+                    loadMoreBooks();
+                }
+            });
+        });
+
+        function applyCurrentSettings() {
+            const currentSeed = $('#seedInput').val();
+            const currentLanguage = $('#languageSelect').val();
+            const currentLikes = $('#likesRange').val();
+            const currentReview = $('#reviewRange').val();
+
+            if (currentSeed && !isNaN(currentSeed)) {
+                // Show subtle loading indication
+                $('body').css('cursor', 'wait');
+                $('.form-control, .form-select, .form-range').prop('disabled', true);
+
+                const params = new URLSearchParams({
+                    seed: currentSeed,
+                    language: currentLanguage,
+                    likes: currentLikes,
+                    review: currentReview
+                });
+
+                window.location.href = '@Url.Action("Index", "Home")?' + params.toString();
+            } else if (currentSeed) {
+                // Reset to original value if invalid
+                $('#seedInput').val('@Model.Seed');
+                alert('Please enter a valid numeric seed');
+            }
+        }
+
+        function loadMoreBooks() {
+            if (isLoading || !hasMore) {
+                console.log('Load blocked:', { isLoading, hasMore });
+                return;
+            }
+
+            isLoading = true;
+            currentPage++;
+
+            console.log('Loading page:', currentPage);
+            $('#loading').show();
+
+            $.ajax({
+                url: '@Url.Action("LoadMore", "Home")',
+                type: 'GET',
+                data: {
+                    page: currentPage,
+                    seed: $('#seedInput').val(),
+                    language: $('#languageSelect').val(),
+                    likes: $('#likesRange').val(),    
+                    review: $('#reviewRange').val()   
+                },
+                success: function(response) {
+                    console.log('Response received:', response);
+                    if (response.books && response.books.length > 0) {
+                        appendBooks(response.books);
+                        hasMore = response.hasMore;
+
+                        console.log('Books loaded:', response.books.length, 'HasMore:', hasMore);
+
+                        if (!hasMore) {
+                            $('#no-more-books').show();
+                            $('#load-more-section').hide();
+                        }
+                    } else {
+                        hasMore = false;
+                        $('#no-more-books').show();
+                        $('#load-more-section').hide();
+                        console.log('No more books available');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error loading more books:', error);
+                    console.error('Status:', status);
+                    console.error('Response:', xhr.responseText);
+                    hasMore = false;
+                },
+                complete: function() {
+                    isLoading = false;
+                    $('#loading').hide();
+                    console.log('Load complete. IsLoading:', isLoading);
+                }
+            });
+        }
+
+        function appendBooks(books) {
+            const tbody = $('#books-table-body');
+
+            books.forEach(function(book) {
+                // Main row
+                const mainRow = `
+                    <tr class="book-row" data-book-id="${book.index}">
+                        <td>${book.index}</td>
+                        <td class="text-break">${book.isbn}</td>
+                        <td>${book.title}</td>
+                        <td>${book.authors}</td>
+                        <td>${book.publisher}</td>
+                    </tr>`;
+
+                // Details row
+                let reviewsHtml = '';
+                if (book.reviews && book.reviews.length > 0) {
+                    book.reviews.forEach(function(review) {
+                        reviewsHtml += `
+                            <p class="mb-1">${review.reviewText}</p>
+                            <p class="text-muted small mb-3">— ${review.reviewerName}</p>`;
+                    });
+                }
+
+                const detailsRow = `
+                    <tr class="book-details" id="details-${book.id}" style="display: none;">
+                        <td colspan="5">
+                            <div class="card border-0">
+                                <div class="card-body p-3" style="background-color: #f8f9fa;">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <h5>${book.title} <span class="text-muted">Paperback</span></h5>
+                                            <h6 class="text-muted">by ${book.authors}</h6>
+                                            <p class="text-muted mb-2">${book.publisher}
+                                            <div class="mb-3">
+                                                <span class="badge bg-primary">★ ${book.likes}</span>
+                                            </div>
+                                            <h6>Reviews</h6>
+                                            ${reviewsHtml}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>`;
+
+                tbody.append(mainRow + detailsRow);
+            });
+        }
+    </script>
+}
+
+@section Styles {
+    <style>
+        .book-row {
+            cursor: pointer;
+        }
+
+            .book-row:hover {
+                background-color: #f8f9fa;
+            }
+
+        .book-details {
+            border-top: none !important;
+        }
+
+        .form-range {
+            height: 6px;
+        }
+
+            .form-range::-webkit-slider-thumb {
+                background-color: #0d6efd;
+                border: none;
+                height: 18px;
+                width: 18px;
+            }
+
+            .form-range::-moz-range-thumb {
+                background-color: #0d6efd;
+                border: none;
+                height: 18px;
+                width: 18px;
+                border-radius: 50%;
+            }
+
+        .form-label {
+            margin-bottom: 0.25rem;
+            font-size: 0.875rem;
+        }
+    </style>
+}

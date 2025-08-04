@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "5ZnsGS9Dr/I=",
+  "success": true,
+  "projectFilePath": "D:\\ILearning\\Task5\\Task5API\\Task5Web\\Task5Web.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Sergio\\.nuget\\packages\\bogus\\35.6.3\\bogus.35.6.3.nupkg.sha512"
+  ],
+  "logs": []
+}
